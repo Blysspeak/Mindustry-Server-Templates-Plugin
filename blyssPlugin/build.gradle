@@ -1,0 +1,392 @@
+ext {
+    mindustryVersion = 'v150.1'
+    jabelVersion = "93fde537c7"
+}
+
+// Настройки только для подпроектов (плагинов)
+subprojects {
+    apply plugin: "java"
+    
+    repositories {
+        mavenCentral()
+        maven { url "https://raw.githubusercontent.com/Zelaux/MindustryRepo/master/repository" }
+        maven { url 'https://www.jitpack.io' }
+    }
+    
+    java {
+        targetCompatibility = 17
+        sourceCompatibility = 17
+    }
+    
+    dependencies {
+        compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
+        compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
+        annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
+    }
+    
+    tasks.withType(JavaCompile) {
+        options.compilerArgs.addAll(['--release', '8'])
+    }
+    
+    jar {
+        archiveFileName = "${project.name}.jar"
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        
+        from {
+            configurations.runtimeClasspath.collect { 
+                it.isDirectory() ? it : zipTree(it) 
+            }
+        }
+        
+        from("src/main/resources") {
+            include "plugin.hjson"
+        }
+    }
+}
+
+// CLI команды для создания плагинов
+task('new') {
+    group = 'Plugin Development'
+    description = 'Create new plugin: ./gradlew new -PnewPlugin=myPlugin'
+    
+    doLast {
+        // Используем hasProperty и getProperty напрямую, чтобы избежать конфликта с project.name
+        def pluginName = null
+        
+        // Проверяем различные варианты параметров
+        if (project.hasProperty('newPlugin')) {
+            pluginName = project.property('newPlugin')
+        } else if (project.hasProperty('pluginName')) {
+            pluginName = project.property('pluginName')
+        } else if (project.hasProperty('pname')) {
+            pluginName = project.property('pname')
+        }
+        
+        // Если не найден параметр, пытаемся интерактивно запросить
+        if (!pluginName) {
+            // Проверяем, запущено ли в интерактивном режиме
+            if (System.console() != null) {
+                println "🔍 Введите имя нового плагина:"
+                pluginName = System.console().readLine()
+            }
+            
+            if (!pluginName || pluginName.trim().isEmpty()) {
+                println "❌ Укажите имя плагина одним из способов:"
+                println "   ./gradlew new -PnewPlugin=myPlugin"
+                println "   ./gradlew new -PpluginName=myPlugin"
+                println "   ./gradlew new -Ppname=myPlugin"
+                println "   или запустите ./gradlew new и введите имя интерактивно"
+                return
+            }
+        }
+        
+        // Очистка имени от пробелов
+        pluginName = pluginName.toString().trim()
+        
+        println "🔍 Получено имя плагина: '$pluginName'"
+        println "🔍 Тип: ${pluginName.getClass()}"
+        
+        createNewPlugin(pluginName)
+    }
+}
+
+def createNewPlugin(String pluginName) {
+    println "🔍 Получено в функции: '$pluginName'"
+    
+    // Очищаем имя плагина - оставляем буквы и цифры
+    def cleanName = pluginName.replaceAll(/[^a-zA-Z0-9]/, '')
+    
+    println "🔍 После очистки: '$cleanName'"
+    
+    if (cleanName.isEmpty()) {
+        println "❌ Некорректное имя плагина! Используйте только буквы и цифры."
+        return
+    }
+    
+    if (cleanName.length() < 3) {
+        println "❌ Имя плагина слишком короткое! Минимум 3 символа."
+        return
+    }
+    
+    // Создаем правильные имена
+    def packageName = cleanName.toLowerCase()
+    def className = cleanName.substring(0, 1).toUpperCase() + cleanName.substring(1).toLowerCase()
+    
+    println "🔍 Имя пакета: '$packageName'"
+    println "🔍 Имя класса: '$className'"
+    
+    def pluginDir = file("src/$packageName")
+    
+    if (pluginDir.exists()) {
+        println "❌ Плагин '$packageName' уже существует!"
+        return
+    }
+    
+    println "🔨 Создаем плагин: $packageName"
+    println "📦 Класс: ${className}Plugin"
+    println "📁 Исходное имя: $pluginName"
+    
+    // Создаем структуру папок
+    def javaDir = file("$pluginDir/src/main/java/$packageName")
+    def resourcesDir = file("$pluginDir/src/main/java/$packageName")
+    
+    javaDir.mkdirs()
+    resourcesDir.mkdirs()
+    
+    // Создаем build.gradle для плагина
+    def buildGradleContent = """apply plugin: "java"
+
+repositories{
+    mavenCentral()
+    maven{ url "https://raw.githubusercontent.com/Zelaux/MindustryRepo/master/repository" }
+    maven{ url 'https://www.jitpack.io' }
+}
+
+java{
+    targetCompatibility = 17
+    sourceCompatibility = 17
+}
+
+ext{
+    mindustryVersion = 'v150.1'
+    jabelVersion = "93fde537c7"
+    isWindows = System.getProperty("os.name").toLowerCase().contains("windows")
+}
+
+dependencies{
+    compileOnly "com.github.Anuken.Arc:arc-core:\$mindustryVersion"
+    compileOnly "com.github.Anuken.Mindustry:core:\$mindustryVersion"
+    
+    annotationProcessor "com.github.Anuken:jabel:\$jabelVersion"
+}
+
+tasks.withType(JavaCompile){
+    options.compilerArgs.addAll(['--release', '8'])
+}
+
+jar{
+    archiveFileName = "\${project.name}.jar"
+    
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    
+    from{
+        configurations.runtimeClasspath.collect{ it.isDirectory() ? it : zipTree(it) }
+    }
+    
+    from("src/main/java/${packageName}"){
+        include "mod.hjson"
+    }
+}
+"""
+    file("$pluginDir/build.gradle").text = buildGradleContent
+    
+    // Создаем основной класс плагина
+    def javaClassContent = """package ${packageName};
+
+import arc.util.CommandHandler;
+import mindustry.mod.Plugin;
+
+public class ${className}Plugin extends Plugin {
+    
+    @Override
+    public void init() {
+        // Красивое уведомление о загрузке плагина
+        System.out.println("══════════");
+        System.out.println("   [${packageName}] - Новый плагин!");
+        System.out.println("   Версия: 1.0");
+        System.out.println("   Автор: blysspeak");
+        System.out.println("   Тип: Серверный плагин");
+        System.out.println("══════════");
+    }
+    
+    @Override
+    public void registerServerCommands(CommandHandler handler) {
+        // Пустой метод - шаблон для серверных команд 
+    }
+    
+    @Override
+    public void registerClientCommands(CommandHandler handler) {
+        // Пустой метод - шаблон для клиентских команд
+    }
+}
+"""
+    file("$javaDir/${className}Plugin.java").text = javaClassContent
+    
+    // Создаем plugin.hjson
+    def hjsonContent = """{
+    name: "${packageName}"
+    displayName: "${pluginName}"
+    author: "blysspeak"
+    description: "Описание плагина ${pluginName}"
+    version: "1.0"
+    minGameVersion: "151"
+    main: "${packageName}.${className}Plugin"
+    hidden: true
+}
+"""
+    file("$resourcesDir/mod.hjson").text = hjsonContent
+    
+    // Создаем README.md
+    def readmeContent = """# ${pluginName} Plugin
+
+Описание плагина.
+
+## Установка
+1. Скомпилируйте плагин: ./gradlew :src:${packageName}:jar
+2. Скопируйте файл build/libs/${packageName}.jar в папку plugins/ вашего сервера
+
+## Команды
+- ${packageName}-test - тестовая команда
+
+## Разработка
+Основной класс: ${packageName}.${className}Plugin
+"""
+    file("$pluginDir/README.md").text = readmeContent
+    
+    // Обновляем settings.gradle
+    updateSettingsGradle(packageName)
+    
+    println "✅ Плагин '$packageName' создан успешно!"
+    println "📁 Расположение: src/$packageName/"
+    println "🔨 Сборка: ./gradlew :src:$packageName:jar"
+    println "📝 Редактируйте: src/$packageName/src/main/java/$packageName/${className}Plugin.java"
+}
+
+def updateSettingsGradle(String pluginName) {
+    def settingsFile = file('settings.gradle')
+    def content = ""
+    
+    if (settingsFile.exists()) {
+        content = settingsFile.text.trim()
+    }
+    
+    def newPlugin = ":src:$pluginName"
+    
+    // Проверяем, не добавлен ли уже этот плагин
+    if (content.contains("'$newPlugin'") || content.contains("\"$newPlugin\"")) {
+        println "📝 Плагин уже есть в settings.gradle"
+        return
+    }
+    
+    if (content.isEmpty()) {
+        // Если файл пустой, создаем новый
+        content = "include ':src:$pluginName'"
+    } else if (content.startsWith("include ")) {
+        // Если есть строка include, добавляем наш плагин
+        // Убираем "include " и все пробелы/кавычки, разбираем по запятым
+        def pluginsLine = content.substring(8).trim()
+        
+        if (pluginsLine.isEmpty()) {
+            content = "include ':src:$pluginName'"
+        } else {
+            // Добавляем новый плагин в конец списка
+            content = "include $pluginsLine, ':src:$pluginName'"
+        }
+    } else {
+        // Если формат файла неожиданный, создаем заново
+        content = "include ':src:$pluginName'"
+    }
+    
+    settingsFile.text = content
+    println "📝 Обновлен settings.gradle: добавлен ':src:$pluginName'"
+}
+
+task('list') {
+    group = 'Plugin Development'
+    description = 'List all plugins'
+    
+    doLast {
+        def srcDir = file('src')
+        if (!srcDir.exists()) {
+            println "📁 Папка src/ не найдена"
+            return
+        }
+        
+        def plugins = []
+        srcDir.listFiles().each { dir ->
+            if (dir.isDirectory() && file("$dir/build.gradle").exists()) {
+                plugins.add(dir.name)
+            }
+        }
+        
+        if (plugins.isEmpty()) {
+            println "📁 Плагины не найдены"
+        } else {
+            println "📦 Найденные плагины:"
+            plugins.each { plugin ->
+                println "  • $plugin"
+            }
+            println ""
+            println "🔨 Сборка всех: ./gradlew jar"
+            println "🔨 Сборка одного: ./gradlew :src:PLUGIN_NAME:jar"
+        }
+    }
+}
+
+// Задача для удаления плагина
+task('remove') {
+    group = 'Plugin Development'
+    description = 'Remove plugin: ./gradlew remove -PdelPlugin=myPlugin'
+    
+    doLast {
+        def pluginName = null
+        
+        // Проверяем различные варианты параметров
+        if (project.hasProperty('delPlugin')) {
+            pluginName = project.property('delPlugin')
+        } else if (project.hasProperty('removePlugin')) {
+            pluginName = project.property('removePlugin')
+        } else if (project.hasProperty('del')) {
+            pluginName = project.property('del')
+        }
+        
+        if (!pluginName) {
+            if (System.console() != null) {
+                println "🔍 Введите имя плагина для удаления:"
+                pluginName = System.console().readLine()
+            }
+            
+            if (!pluginName || pluginName.trim().isEmpty()) {
+                println "❌ Укажите имя плагина:"
+                println "   ./gradlew remove -PdelPlugin=myPlugin"
+                println "   ./gradlew remove -PremovePlugin=myPlugin"
+                println "   ./gradlew remove -Pdel=myPlugin"
+                return
+            }
+        }
+        
+        pluginName = pluginName.toString().trim().toLowerCase()
+        def pluginDir = file("src/$pluginName")
+        
+        if (!pluginDir.exists()) {
+            println "❌ Плагин '$pluginName' не найден!"
+            return
+        }
+        
+        // Удаляем директорию плагина
+        pluginDir.deleteDir()
+        
+        // Удаляем из settings.gradle
+        def settingsFile = file('settings.gradle')
+        if (settingsFile.exists()) {
+            def content = settingsFile.text
+            def newPlugin = ":src:$pluginName"
+            
+            // Удаляем с запятой перед или после
+            content = content.replaceAll(", '$newPlugin'", "")
+            content = content.replaceAll("'$newPlugin', ", "")
+            content = content.replaceAll("'$newPlugin'", "")
+            content = content.replaceAll(", \"$newPlugin\"", "")
+            content = content.replaceAll("\"$newPlugin\", ", "")
+            content = content.replaceAll("\"$newPlugin\"", "")
+            
+            // Очищаем лишние запятые
+            content = content.replaceAll(", ,", ",")
+            content = content.replaceAll("include ,", "include ")
+            
+            settingsFile.text = content
+        }
+        
+        println "✅ Плагин '$pluginName' удален!"
+    }
+}

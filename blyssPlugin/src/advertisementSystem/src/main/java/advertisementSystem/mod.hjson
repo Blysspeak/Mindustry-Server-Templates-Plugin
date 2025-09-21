@@ -1,0 +1,8 @@
+name: "advertisementSystem"
+displayName: "Advertisement System"
+author: "blysspeak"
+description: "Мощная система управления рекламными сообщениями на сервере с множеством настроек и функций."
+version: "1.0"
+minGameVersion: "151"
+main: "advertisementSystem.advertisementSystem"
+hidden: true

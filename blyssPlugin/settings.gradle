@@ -1,0 +1,1 @@
+include ':src:waveControl', ':src:advertisementSystem', ':src:helpSystem', ':src:beautifulMessages'

@@ -1,0 +1,8 @@
+name: "waveControl"
+displayName: "Wave Control Plugin"  
+author: "blysspeak"
+description: "Плагин для управления волнами на сервере. Позволяет администраторам пропускать волны и управлять их таймингом."
+version: "1.0"
+minGameVersion: "151"
+main: "waveControl.waveControl"
+hidden: true

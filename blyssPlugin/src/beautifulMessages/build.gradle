@@ -1,0 +1,43 @@
+apply plugin: "java"
+
+repositories{
+    mavenCentral()
+    maven{ url 'https://www.jitpack.io' }
+}
+
+java{
+    targetCompatibility = 17
+    sourceCompatibility = 17
+}
+
+ext{
+    mindustryVersion = 'v150.1'
+    jabelVersion = "93fde537c7"
+    isWindows = System.getProperty("os.name").toLowerCase().contains("windows")
+}
+
+dependencies{
+    compileOnly "com.github.Anuken.Arc:arc-core:"
+    compileOnly "com.github.Anuken.Mindustry:core:"
+    
+    annotationProcessor "com.github.Anuken:jabel:"
+}
+
+tasks.withType(JavaCompile){
+    options.compilerArgs.addAll(['--release', '8'])
+}
+
+jar{
+    archiveFileName = "${project.name}.jar"
+    
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    
+    from{
+        configurations.runtimeClasspath.collect{ it.isDirectory() ? it : zipTree(it) }
+    }
+    
+    from("src/main/java/beautifulMessages"){
+        include "mod.hjson"
+    }
+
+}

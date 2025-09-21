@@ -1,0 +1,8 @@
+name: "helpSystem"
+displayName: "Help System Plugin"
+author: "blysspeak"
+description: "Система помощи для игроков"
+version: "1.0"
+minGameVersion: "151"
+main: "helpSystem.helpSystem"
+hidden: true

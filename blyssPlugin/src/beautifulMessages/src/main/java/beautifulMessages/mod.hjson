@@ -1,0 +1,8 @@
+name: "beautifulMessages"
+displayName: "Beautiful Messages Plugin"
+author: "blysspeak"
+description: "A plugin that shows beautiful and colorful messages when players join and leave the server"
+version: "1.0"
+minGameVersion: "151.1"
+main: "beautifulMessages.beautifulMessages"
+hidden: true
