@@ -99,10 +99,11 @@ mindustry-plugin-server/
 sudo systemctl start docker
 
 # 🚀 Сборка и запуск контейнера
-sudo docker-compose up -d
+sudo docker compose build
+sudo docker compose up -d
 
 # 📋 Просмотр логов
-sudo docker-compose logs -f
+sudo docker compose logs -f
 
 # 🔧 Подключение к консоли сервера
 sudo docker attach mindustry-server
