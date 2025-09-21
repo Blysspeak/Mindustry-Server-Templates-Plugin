@@ -5,9 +5,9 @@ services:
     build: .
     container_name: mindustry-server
     ports:
-      - '6567:6567/tcp'
-      - '6567:6567/udp'
-      - '6868:6868'
+      - "6567:6567/tcp"
+      - "6567:6567/udp"
+      - "6868:6868"
     volumes:
       - ./server/config:/app/config
       - ./server/maps:/app/maps
