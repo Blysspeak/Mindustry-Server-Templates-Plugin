@@ -5,21 +5,25 @@ services:
     build: .
     container_name: mindustry-server
     ports:
-      - "6567:6567/tcp"
-      - "6567:6567/udp"
-      - "6868:6868"
-    volumes:
-      - ./server/config:/app/config
-      - ./server/maps:/app/maps
-      - ./server/mods:/app/mods
-      - ./logs:/app/logs
+      - '6567:6567/tcp'
+      - '6567:6567/udp'
+      - '6868:6868/tcp'
     restart: unless-stopped
     environment:
       - JAVA_OPTS=-Xmx512M
-    # Ограничения ресурсов для слабого сервера
+    # Ограничения ресурсов
     deploy:
       resources:
         limits:
           memory: 600M
         reservations:
           memory: 512M
+    # Включение TTY и stdin для интерактивного режима
+    tty: true
+    stdin_open: true
+    # Явное указание сети bridge для лучшей совместимости
+    network_mode: bridge
+
+networks:
+  default:
+    driver: bridge

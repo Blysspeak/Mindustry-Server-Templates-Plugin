@@ -17,7 +17,7 @@ if not exist "server.jar" (
 
 :: Запускаем сервер с выделением 1 ГБ памяти
 echo Запуск сервера Mindustry с 1 ГБ памяти...
-java -Xmx1G -jar server.jar
+java -Xmx1G -jar server.jar host
 
 :: Пауза, чтобы окно не закрывалось после завершения
 pause
