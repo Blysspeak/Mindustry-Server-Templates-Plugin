@@ -1,5 +1,7 @@
 .vscode
 .gradle
 build
-config
 logs
+settings_backups
+settings_backup.bin
+settings.bin
