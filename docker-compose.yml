@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mindustry-server:
     build: .
@@ -7,23 +5,17 @@ services:
     ports:
       - '6567:6567/tcp'
       - '6567:6567/udp'
-      - '6868:6868/tcp'
     restart: unless-stopped
     environment:
       - JAVA_OPTS=-Xmx512M
-    # Ограничения ресурсов
-    deploy:
-      resources:
-        limits:
-          memory: 600M
-        reservations:
-          memory: 512M
-    # Включение TTY и stdin для интерактивного режима
+    user: '1000:1000'
+    volumes:
+      # Конфиги + моды (всё из server/config)
+      - ./server/config:/app/config
+      # Логи наружу
+      - ./server/logs:/app/logs
+      # Сам jar наружу, чтобы можно было менять
+      - ./server/server.jar:/app/server.jar
     tty: true
     stdin_open: true
-    # Явное указание сети bridge для лучшей совместимости
     network_mode: bridge
-
-networks:
-  default:
-    driver: bridge
